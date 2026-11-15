@@ -49,7 +49,7 @@
   <ItemGroup>
     <ClInclude Include="audio\fixed_ring.hpp" />
     <ClInclude Include="audio\render_feed.hpp" />
-        <ClInclude Include="convolution\convolution_reverb.hpp" />
+    <ClInclude Include="convolution\convolution_reverb.hpp" />
     <ClInclude Include="convolution\fft.hpp" />
     <ClInclude Include="convolution\partition.hpp" />
     <ClInclude Include="equalizer\bass_boost.hpp" />
@@ -60,6 +60,10 @@
     <ClInclude Include="equalizer\graphic_equalizer.hpp" />
     <ClInclude Include="isolation\expander_gate.hpp" />
     <ClInclude Include="isolation\voice_isolator.hpp" />
+    <ClInclude Include="license\license_codec.hpp" />
+    <ClInclude Include="license\license_core.hpp" />
+    <ClInclude Include="license\license_ui.hpp" />
+    <ClInclude Include="license\license_pubkey.inc" />
     <ClInclude Include="mixing\amount_law.hpp" />
     <ClInclude Include="mixing\cmss3d.hpp" />
     <ClInclude Include="mixing\echo_tap.hpp" />
@@ -86,9 +90,6 @@
     <ClInclude Include="reverb\delay_bank.hpp" />
     <ClInclude Include="reverb\reverb_engine.hpp" />
     <ClInclude Include="reverb\reverb_params.hpp" />
-    <ClInclude Include="license\license_core.hpp" />
-    <ClInclude Include="license\license_ui.hpp" />
-    <ClInclude Include="license\license_pubkey.inc" />
     <ClInclude Include="ui\font_file.hpp" />
     <ClInclude Include="voice\fx_parts.hpp" />
     <ClInclude Include="voice\glitch_pad.hpp" />
@@ -109,11 +110,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.manifest" />
-    <Image Include="..\res\blaster.ico" />
-    <Image Include="..\res\blaster.png" />
-    <Image Include="..\res\blaster_art.png" />
-    <Image Include="..\res\activation_bg.jpg" />
-    <Image Include="..\res\blaster_art_ink.png" />
+    <Image Include="blaster.ico" />
+    <Image Include="blaster.png" />
+    <Image Include="blaster_art.png" />
+    <Image Include="activation_bg.jpg" />
+    <Image Include="blaster_art_ink.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
