@@ -1,0 +1,33 @@
+1 24 "app.manifest"
+1 ICON "../res/blaster.ico"
+201 RCDATA "../res/blaster.png"
+202 RCDATA "../res/blaster_art.png"
+203 RCDATA "../res/activation_bg.jpg"
+204 RCDATA "../res/blaster_art_ink.png"
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+FILEOS          0x40004L
+FILETYPE        0x1L
+{
+  BLOCK "StringFileInfo"
+  {
+    BLOCK "040904b0"
+    {
+      VALUE "CompanyName",      "Blaster"
+      VALUE "FileDescription",  "Blaster Audio Effects Console"
+      VALUE "FileVersion",      "1.0.0.0"
+      VALUE "InternalName",     "Blaster"
+      VALUE "LegalCopyright",   "Copyright (c) Blaster - all rights reserved"
+      VALUE "LegalTrademarks",  "Blaster"
+      VALUE "OriginalFilename", "Blaster.exe"
+      VALUE "ProductName",      "Blaster"
+      VALUE "ProductVersion",   "1.0.0.0"
+    }
+  }
+  BLOCK "VarFileInfo"
+  {
+    VALUE "Translation", 0x409, 1200
+  }
+}
