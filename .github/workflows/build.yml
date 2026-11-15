@@ -1,0 +1,53 @@
+name: Build Blaster
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Blaster
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+          & $msbuild Blaster.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /m /nologo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Download yt-dlp
+        shell: pwsh
+        run: |
+          $tag = (Invoke-RestMethod "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest").tag_name
+          $base = "https://github.com/yt-dlp/yt-dlp/releases/download/$tag"
+          Invoke-WebRequest "$base/yt-dlp.exe" -OutFile yt-dlp.exe
+          Invoke-WebRequest "$base/SHA2-256SUMS" -OutFile SHA2-256SUMS
+
+      - name: Download VB-Cable
+        shell: pwsh
+        run: |
+          try {
+            $page = Invoke-WebRequest "https://vb-audio.com/Cable/" -UseBasicParsing
+            $href = ($page.Links | Where-Object { $_.href -match '(?i)VBCABLE_Driver.*\.zip' } | Select-Object -First 1).href
+          } catch { $href = $null }
+          if (-not $href) { $href = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip" }
+          if ($href -notmatch '^https?://') { $href = "https://vb-audio.com$href" }
+          Invoke-WebRequest $href -OutFile VBCABLE_Driver.zip
+
+      - name: Bundle
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item build\Blaster\Blaster.exe release\
+          Copy-Item yt-dlp.exe release\
+          Copy-Item SHA2-256SUMS release\
+          Copy-Item VBCABLE_Driver.zip release\
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Blaster-x64
+          path: release\
+          if-no-files-found: error
