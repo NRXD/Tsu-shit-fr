@@ -11,75 +11,50 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Arrange source into subfolders
-        shell: cmd
+        shell: pwsh
         run: |
-          md audio
-          md convolution
-          md equalizer
-          md isolation
-          md license
-          md mixing
-          md playback
-          md presets
-          md reverb
-          md ui
-          md voice
-          copy biquad.hpp audio\
-          copy clip_util.hpp audio\
-          copy delay_bank.hpp audio\
-          copy fixed_ring.hpp audio\
-          copy render_feed.hpp audio\
-          copy convolution_reverb.hpp convolution\
-          copy fft.hpp convolution\
-          copy partition.hpp convolution\
-          copy bass_boost.hpp equalizer\
-          copy eq_config.hpp equalizer\
-          copy eq_presets.hpp equalizer\
-          copy filter_design.hpp equalizer\
-          copy graphic_equalizer.hpp equalizer\
-          copy expander_gate.hpp isolation\
-          copy voice_isolator.hpp isolation\
-          copy license_codec.hpp license\
-          copy license_core.hpp license\
-          copy license_pubkey.inc license\
-          copy license_ui.hpp license\
-          copy amount_law.hpp mixing\
-          copy echo_tap.hpp mixing\
-          copy fx_parts.hpp mixing\
-          copy mic_drive.hpp mixing\
-          copy mic_tone.hpp mixing\
-          copy out_chain.hpp mixing\
-          copy send_level.hpp mixing\
-          copy soft_clip.hpp mixing\
-          copy step_back.hpp mixing\
-          copy subsonic.hpp mixing\
-          copy wet_peak.hpp mixing\
-          copy hear_tap.hpp playback\
-          copy player.hpp playback\
-          copy program_tap.hpp playback\
-          copy recorder.hpp playback\
-          copy sound_board.hpp playback\
-          copy sound_convert.hpp playback\
-          copy sound_edit.hpp playback\
-          copy sound_save.hpp playback\
-          copy card_presets.hpp presets\
-          copy card_core.hpp reverb\
-          copy reverb_engine.hpp reverb\
-          copy reverb_params.hpp reverb\
-          copy font_file.hpp ui\
-          copy cmss3d.hpp voice\
-          copy glitch_pad.hpp voice\
-          copy glitcher.hpp voice\
-          copy pitch_tracker.hpp voice\
-          copy song_changer.hpp voice\
-          copy song_shifter.hpp voice\
-          copy tempo.hpp voice\
-          copy timbre.hpp voice\
-          copy vocoder.hpp voice\
-          copy voice_fx.hpp voice\
-          copy voice_masks.hpp voice\
-          copy voice_shaper.hpp voice\
-          copy voice_tone.hpp voice\
+          $root = $PWD.Path
+          $folders = @("audio","convolution","equalizer","isolation","license","mixing","playback","presets","reverb","ui","voice")
+          foreach ($f in $folders) {
+            $p = "$root\$f"
+            [System.IO.Directory]::CreateDirectory($p) | Out-Null
+            Write-Host "created $p exists=$([System.IO.Directory]::Exists($p))"
+          }
+          $map = @(
+            @("biquad.hpp","audio"), @("clip_util.hpp","audio"), @("delay_bank.hpp","audio"),
+            @("fixed_ring.hpp","audio"), @("render_feed.hpp","audio"),
+            @("convolution_reverb.hpp","convolution"), @("fft.hpp","convolution"), @("partition.hpp","convolution"),
+            @("bass_boost.hpp","equalizer"), @("eq_config.hpp","equalizer"), @("eq_presets.hpp","equalizer"),
+            @("filter_design.hpp","equalizer"), @("graphic_equalizer.hpp","equalizer"),
+            @("expander_gate.hpp","isolation"), @("voice_isolator.hpp","isolation"),
+            @("license_codec.hpp","license"), @("license_core.hpp","license"),
+            @("license_pubkey.inc","license"), @("license_ui.hpp","license"),
+            @("amount_law.hpp","mixing"), @("echo_tap.hpp","mixing"), @("fx_parts.hpp","mixing"),
+            @("mic_drive.hpp","mixing"), @("mic_tone.hpp","mixing"), @("out_chain.hpp","mixing"),
+            @("send_level.hpp","mixing"), @("soft_clip.hpp","mixing"), @("step_back.hpp","mixing"),
+            @("subsonic.hpp","mixing"), @("wet_peak.hpp","mixing"),
+            @("hear_tap.hpp","playback"), @("player.hpp","playback"), @("program_tap.hpp","playback"),
+            @("recorder.hpp","playback"), @("sound_board.hpp","playback"), @("sound_convert.hpp","playback"),
+            @("sound_edit.hpp","playback"), @("sound_save.hpp","playback"),
+            @("card_presets.hpp","presets"),
+            @("card_core.hpp","reverb"), @("reverb_engine.hpp","reverb"), @("reverb_params.hpp","reverb"),
+            @("font_file.hpp","ui"),
+            @("cmss3d.hpp","voice"), @("glitch_pad.hpp","voice"), @("glitcher.hpp","voice"),
+            @("pitch_tracker.hpp","voice"), @("song_changer.hpp","voice"), @("song_shifter.hpp","voice"),
+            @("tempo.hpp","voice"), @("timbre.hpp","voice"), @("vocoder.hpp","voice"),
+            @("voice_fx.hpp","voice"), @("voice_masks.hpp","voice"), @("voice_shaper.hpp","voice"),
+            @("voice_tone.hpp","voice")
+          )
+          foreach ($entry in $map) {
+            $src = "$root\$($entry[0])"
+            $dst = "$root\$($entry[1])\$($entry[0])"
+            if ([System.IO.File]::Exists($src)) {
+              [System.IO.File]::Copy($src, $dst, $true)
+              Write-Host "copied $($entry[0]) -> $($entry[1])"
+            } else {
+              Write-Host "MISSING $src"
+            }
+          }
 
       - name: Build Blaster
         shell: pwsh
