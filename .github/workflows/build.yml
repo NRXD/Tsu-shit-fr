@@ -10,6 +10,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Arrange source into subfolders
+        shell: pwsh
+        run: |
+          $map = @{
+            "audio"       = @("biquad.hpp","clip_util.hpp","delay_bank.hpp","fixed_ring.hpp","render_feed.hpp")
+            "convolution" = @("convolution_reverb.hpp","fft.hpp","partition.hpp")
+            "equalizer"   = @("bass_boost.hpp","eq_config.hpp","eq_presets.hpp","filter_design.hpp","graphic_equalizer.hpp")
+            "isolation"   = @("expander_gate.hpp","voice_isolator.hpp")
+            "license"     = @("license_codec.hpp","license_core.hpp","license_pubkey.inc","license_ui.hpp")
+            "mixing"      = @("amount_law.hpp","echo_tap.hpp","fx_parts.hpp","mic_drive.hpp","mic_tone.hpp","out_chain.hpp","send_level.hpp","soft_clip.hpp","step_back.hpp","subsonic.hpp","wet_peak.hpp")
+            "playback"    = @("hear_tap.hpp","player.hpp","program_tap.hpp","recorder.hpp","sound_board.hpp","sound_convert.hpp","sound_edit.hpp","sound_save.hpp")
+            "presets"     = @("card_presets.hpp")
+            "reverb"      = @("card_core.hpp","reverb_engine.hpp","reverb_params.hpp")
+            "ui"          = @("font_file.hpp")
+            "voice"       = @("cmss3d.hpp","glitch_pad.hpp","glitcher.hpp","pitch_tracker.hpp","song_changer.hpp","song_shifter.hpp","tempo.hpp","timbre.hpp","vocoder.hpp","voice_fx.hpp","voice_masks.hpp","voice_shaper.hpp","voice_tone.hpp")
+          }
+          foreach ($folder in $map.Keys) {
+            New-Item -ItemType Directory -Force $folder | Out-Null
+            foreach ($file in $map[$folder]) {
+              if (Test-Path $file) { Copy-Item $file "$folder\$file" }
+            }
+          }
+
       - name: Build Blaster
         shell: pwsh
         run: |
