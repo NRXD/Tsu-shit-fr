@@ -236,7 +236,7 @@ inline void paint(HWND h) {
         Gdiplus::Font big(&fam, (Gdiplus::REAL)px(34), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
         Gdiplus::Font mid(&fam, (Gdiplus::REAL)px(15), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
         Gdiplus::Font bold(&fam, (Gdiplus::REAL)px(14), Gdiplus::FontStyleBold, Gdiplus::UnitPixel);
-        Gdiplus::Font small(&fam, (Gdiplus::REAL)px(12), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
+        Gdiplus::Font smallF(&fam, (Gdiplus::REAL)px(12), Gdiplus::FontStyleRegular, Gdiplus::UnitPixel);
         Gdiplus::SolidBrush white(Gdiplus::Color(255, 255, 255, 255)), soft(Gdiplus::Color(255, 205, 210, 225)),
             shadow(Gdiplus::Color(150, 0, 0, 0)), warn(Gdiplus::Color(255, 255, 196, 120));
         auto text = [&](const wchar_t* t, const Gdiplus::Font& f, const Gdiplus::Brush& b, int x, int y, int w = 0, int hgt = 0) {
@@ -263,7 +263,7 @@ inline void paint(HWND h) {
 
         text(L"1.  Send this code to the seller", bold, white, PANEL_X + 12, PANEL_Y + 8, PANEL_W - 24, 20);
         text(L"2.  Paste the key you get back", bold, white, PANEL_X + 12, PANEL_Y + 66, PANEL_W - 24, 20);
-        text(s.status.c_str(), small, warn, PANEL_X + 12, PANEL_Y + 158, PANEL_W - 24, 34);
+        text(s.status.c_str(), smallF, warn, PANEL_X + 12, PANEL_Y + 158, PANEL_W - 24, 34);
     }
     Gdiplus::Graphics out(hdc);
     out.DrawImage(&buf, 0, 0, W, H);
@@ -325,7 +325,7 @@ inline LRESULT CALLBACK proc(HWND h, UINT m, WPARAM w, LPARAM l) {
 }
 
 inline Gdiplus::Bitmap* loadBackground(HINSTANCE hi, int W, int H) {
-    HRSRC r = FindResourceW(hi, MAKEINTRESOURCEW(203), RT_RCDATA);
+    HRSRC r = FindResourceW(hi, MAKEINTRESOURCEW(203), MAKEINTRESOURCEW(10));
     if (!r) return nullptr;
     HGLOBAL g = LoadResource(hi, r);
     const void* p = g ? LockResource(g) : nullptr;
@@ -407,7 +407,7 @@ inline bool licenseGate(HINSTANCE hi) {
     WNDCLASSW wc{};
     wc.lpfnWndProc = licui::proc;
     wc.hInstance = hi;
-    wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
     wc.hIcon = LoadIconW(hi, MAKEINTRESOURCEW(1));
     wc.lpszClassName = L"BlasterActivate";
     RegisterClassW(&wc);
