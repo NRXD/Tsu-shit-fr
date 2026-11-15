@@ -14,47 +14,100 @@ jobs:
         shell: pwsh
         run: |
           $root = $PWD.Path
+
+          # A file named LICENSE collides with the "license" folder on Windows (case-insensitive)
+          $lic = Join-Path $root "license"
+          if (Test-Path -LiteralPath $lic -PathType Leaf) {
+            Move-Item -LiteralPath $lic -Destination (Join-Path $root "LICENSE.txt") -Force
+            Write-Host "renamed LICENSE -> LICENSE.txt"
+          }
+
           $folders = @("audio","convolution","equalizer","isolation","license","mixing","playback","presets","reverb","ui","voice")
           foreach ($f in $folders) {
-            $p = "$root\$f"
-            [System.IO.Directory]::CreateDirectory($p) | Out-Null
-            Write-Host "created $p exists=$([System.IO.Directory]::Exists($p))"
+            [System.IO.Directory]::CreateDirectory((Join-Path $root $f)) | Out-Null
           }
+
+          # source file in root, destination folder, destination file name
           $map = @(
-            @("biquad.hpp","audio"), @("clip_util.hpp","audio"), @("delay_bank.hpp","audio"),
-            @("fixed_ring.hpp","audio"), @("render_feed.hpp","audio"),
-            @("convolution_reverb.hpp","convolution"), @("fft.hpp","convolution"), @("partition.hpp","convolution"),
-            @("bass_boost.hpp","equalizer"), @("eq_config.hpp","equalizer"), @("eq_presets.hpp","equalizer"),
-            @("filter_design.hpp","equalizer"), @("graphic_equalizer.hpp","equalizer"),
-            @("expander_gate.hpp","isolation"), @("voice_isolator.hpp","isolation"),
-            @("license_codec.hpp","license"), @("license_core.hpp","license"),
-            @("license_pubkey.inc","license"), @("license_ui.hpp","license"),
-            @("amount_law.hpp","mixing"), @("echo_tap.hpp","mixing"), @("fx_parts.hpp","mixing"),
-            @("mic_drive.hpp","mixing"), @("mic_tone.hpp","mixing"), @("out_chain.hpp","mixing"),
-            @("send_level.hpp","mixing"), @("soft_clip.hpp","mixing"), @("step_back.hpp","mixing"),
-            @("subsonic.hpp","mixing"), @("wet_peak.hpp","mixing"),
-            @("hear_tap.hpp","playback"), @("player.hpp","playback"), @("program_tap.hpp","playback"),
-            @("recorder.hpp","playback"), @("sound_board.hpp","playback"), @("sound_convert.hpp","playback"),
-            @("sound_edit.hpp","playback"), @("sound_save.hpp","playback"),
-            @("card_presets.hpp","presets"),
-            @("card_core.hpp","reverb"), @("reverb_engine.hpp","reverb"), @("reverb_params.hpp","reverb"),
-            @("font_file.hpp","ui"),
-            @("cmss3d.hpp","voice"), @("glitch_pad.hpp","voice"), @("glitcher.hpp","voice"),
-            @("pitch_tracker.hpp","voice"), @("song_changer.hpp","voice"), @("song_shifter.hpp","voice"),
-            @("tempo.hpp","voice"), @("timbre.hpp","voice"), @("vocoder.hpp","voice"),
-            @("voice_fx.hpp","voice"), @("voice_masks.hpp","voice"), @("voice_shaper.hpp","voice"),
-            @("voice_tone.hpp","voice")
+            @("fixed_ring.hpp","audio","fixed_ring.hpp"),
+            @("render_feed.hpp","audio","render_feed.hpp"),
+
+            @("convolution_reverb.hpp","convolution","convolution_reverb.hpp"),
+            @("fft.hpp","convolution","fft.hpp"),
+            @("partition.hpp","convolution","partition.hpp"),
+
+            @("biquad.hpp","equalizer","biquad.hpp"),
+            @("bass_boost.hpp","equalizer","bass_boost.hpp"),
+            @("eq_config.hpp","equalizer","eq_config.hpp"),
+            @("eq_presets.hpp","equalizer","eq_presets.hpp"),
+            @("filter_design.hpp","equalizer","filter_design.hpp"),
+            @("graphic_equalizer.hpp","equalizer","graphic_equalizer.hpp"),
+
+            @("expander_gate.hpp","isolation","expander_gate.hpp"),
+            @("voice_isolator.hpp","isolation","voice_isolator.hpp"),
+
+            @("license_codec.hpp","license","license_codec.hpp"),
+            @("license_core.hpp","license","license_core.hpp"),
+            @("license_pubkey.inc","license","license_pubkey.inc"),
+            @("license_ui.hpp","license","license_ui.hpp"),
+
+            @("amount_law.hpp","mixing","amount_law.hpp"),
+            @("cmss3d.hpp","mixing","cmss3d.hpp"),
+            @("echo_tap.hpp","mixing","echo_tap.hpp"),
+            @("mic_drive.hpp","mixing","mic_drive.hpp"),
+            @("mic_tone.hpp","mixing","mic_tone.hpp"),
+            @("out_chain.hpp","mixing","out_chain.hpp"),
+            @("send_level.hpp","mixing","send_level.hpp"),
+            @("soft_clip.hpp","mixing","soft_clip.hpp"),
+            @("step_back.hpp","mixing","step_back.hpp"),
+            @("subsonic.hpp","mixing","subsonic.hpp"),
+            @("wet_peak.hpp","mixing","wet_peak.hpp"),
+
+            @("clip_util.hpp","playback","clip_util.hpp"),
+            @("hear_tap.hpp","playback","hear_tap.hpp"),
+            @("player.hpp","playback","player.hpp"),
+            @("program_tap.hpp","playback","program_tap.hpp"),
+            @("recorder.hpp","playback","recorder.hpp"),
+            @("sound_board.hpp","playback","sound_board.hpp"),
+            @("sound_convert.hpp","playback","sound_convert.hpp"),
+            @("sound_edit.hpp","playback","sound_edit.hpp"),
+            @("sound_save.hpp","playback","sound_save.hpp"),
+
+            @("card_presets.hpp","presets","card_presets.hpp"),
+
+            # the reverb folder needs the OTHER biquad (namespace eax), uploaded as "biquad (1).hpp"
+            @("biquad (1).hpp","reverb","biquad.hpp"),
+            @("card_core.hpp","reverb","card_core.hpp"),
+            @("delay_bank.hpp","reverb","delay_bank.hpp"),
+            @("reverb_engine.hpp","reverb","reverb_engine.hpp"),
+            @("reverb_params.hpp","reverb","reverb_params.hpp"),
+
+            @("font_file.hpp","ui","font_file.hpp"),
+
+            @("fx_parts.hpp","voice","fx_parts.hpp"),
+            @("glitch_pad.hpp","voice","glitch_pad.hpp"),
+            @("glitcher.hpp","voice","glitcher.hpp"),
+            @("pitch_tracker.hpp","voice","pitch_tracker.hpp"),
+            @("song_changer.hpp","voice","song_changer.hpp"),
+            @("song_shifter.hpp","voice","song_shifter.hpp"),
+            @("tempo.hpp","voice","tempo.hpp"),
+            @("timbre.hpp","voice","timbre.hpp"),
+            @("vocoder.hpp","voice","vocoder.hpp"),
+            @("voice_fx.hpp","voice","voice_fx.hpp"),
+            @("voice_masks.hpp","voice","voice_masks.hpp"),
+            @("voice_shaper.hpp","voice","voice_shaper.hpp"),
+            @("voice_tone.hpp","voice","voice_tone.hpp")
           )
-          foreach ($entry in $map) {
-            $src = "$root\$($entry[0])"
-            $dst = "$root\$($entry[1])\$($entry[0])"
-            if ([System.IO.File]::Exists($src)) {
-              [System.IO.File]::Copy($src, $dst, $true)
-              Write-Host "copied $($entry[0]) -> $($entry[1])"
-            } else {
-              Write-Host "MISSING $src"
-            }
+
+          $missing = 0
+          foreach ($e in $map) {
+            $src = Join-Path $root $e[0]
+            $dst = Join-Path (Join-Path $root $e[1]) $e[2]
+            if (-not [System.IO.File]::Exists($src)) { Write-Host "MISSING $($e[0])"; $missing++; continue }
+            [System.IO.File]::Copy($src, $dst, $true)
+            Write-Host "copied $($e[0]) -> $($e[1])\$($e[2])"
           }
+          if ($missing -gt 0) { Write-Host "$missing source file(s) missing"; exit 1 }
 
       - name: Build Blaster
         shell: pwsh
