@@ -1,9 +1,9 @@
 1 24 "app.manifest"
-1 ICON "../res/blaster.ico"
-201 RCDATA "../res/blaster.png"
-202 RCDATA "../res/blaster_art.png"
-203 RCDATA "../res/activation_bg.jpg"
-204 RCDATA "../res/blaster_art_ink.png"
+1 ICON "blaster.ico"
+201 RCDATA "blaster.png"
+202 RCDATA "blaster_art.png"
+203 RCDATA "activation_bg.jpg"
+204 RCDATA "blaster_art_ink.png"
 
 1 VERSIONINFO
 FILEVERSION     1,0,0,0
