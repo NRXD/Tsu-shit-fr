@@ -34,6 +34,9 @@
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>ole32.lib;uuid.lib;comctl32.lib;shell32.lib;advapi32.lib;gdi32.lib;gdiplus.lib;msimg32.lib;uxtheme.lib;mf.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;winmm.lib;comdlg32.lib;avrt.lib;delayimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
