@@ -27,13 +27,18 @@ jobs:
             "ui"          = @("font_file.hpp")
             "voice"       = @("cmss3d.hpp","glitch_pad.hpp","glitcher.hpp","pitch_tracker.hpp","song_changer.hpp","song_shifter.hpp","tempo.hpp","timbre.hpp","vocoder.hpp","voice_fx.hpp","voice_masks.hpp","voice_shaper.hpp","voice_tone.hpp")
           }
+          # Pass 1: create all folders first
           foreach ($folder in $map.Keys) {
             $dest = Join-Path $root $folder
-            New-Item -ItemType Directory -Force -Path $dest | Out-Null
+            if (-not (Test-Path $dest)) { md $dest | Out-Null }
+          }
+          # Pass 2: copy files
+          foreach ($folder in $map.Keys) {
+            $dest = Join-Path $root $folder
             foreach ($file in $map[$folder]) {
               $src = Join-Path $root $file
               if (Test-Path $src) {
-                Copy-Item -Path $src -Destination (Join-Path $dest $file) -Force
+                Copy-Item $src (Join-Path $dest $file)
               }
             }
           }
