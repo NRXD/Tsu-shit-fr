@@ -13,6 +13,7 @@ jobs:
       - name: Arrange source into subfolders
         shell: pwsh
         run: |
+          $root = $PWD.Path
           $map = @{
             "audio"       = @("biquad.hpp","clip_util.hpp","delay_bank.hpp","fixed_ring.hpp","render_feed.hpp")
             "convolution" = @("convolution_reverb.hpp","fft.hpp","partition.hpp")
@@ -27,10 +28,12 @@ jobs:
             "voice"       = @("cmss3d.hpp","glitch_pad.hpp","glitcher.hpp","pitch_tracker.hpp","song_changer.hpp","song_shifter.hpp","tempo.hpp","timbre.hpp","vocoder.hpp","voice_fx.hpp","voice_masks.hpp","voice_shaper.hpp","voice_tone.hpp")
           }
           foreach ($folder in $map.Keys) {
-            New-Item -ItemType Directory -Force -Path $folder | Out-Null
+            $dest = Join-Path $root $folder
+            New-Item -ItemType Directory -Force -Path $dest | Out-Null
             foreach ($file in $map[$folder]) {
-              if (Test-Path $file) {
-                Copy-Item -Path $file -Destination "$folder\$file" -Force
+              $src = Join-Path $root $file
+              if (Test-Path $src) {
+                Copy-Item -Path $src -Destination (Join-Path $dest $file) -Force
               }
             }
           }
