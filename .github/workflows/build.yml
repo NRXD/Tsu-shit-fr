@@ -27,9 +27,11 @@ jobs:
             "voice"       = @("cmss3d.hpp","glitch_pad.hpp","glitcher.hpp","pitch_tracker.hpp","song_changer.hpp","song_shifter.hpp","tempo.hpp","timbre.hpp","vocoder.hpp","voice_fx.hpp","voice_masks.hpp","voice_shaper.hpp","voice_tone.hpp")
           }
           foreach ($folder in $map.Keys) {
-            New-Item -ItemType Directory -Force $folder | Out-Null
+            New-Item -ItemType Directory -Force -Path $folder | Out-Null
             foreach ($file in $map[$folder]) {
-              if (Test-Path $file) { Copy-Item $file "$folder\$file" }
+              if (Test-Path $file) {
+                Copy-Item -Path $file -Destination "$folder\$file" -Force
+              }
             }
           }
 
