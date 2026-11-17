@@ -607,10 +607,25 @@ static bool initLowLatency(IAudioClient* ac, DWORD flags, HANDLE evt) {
     return ok;
 }
 
+// Debug trace (view with DebugView / VS Output window).
+static void theoneLog(const wchar_t* fmt, long a = 0, long b = 0) {
+    wchar_t buf[256];
+    _snwprintf_s(buf, _countof(buf), _TRUNCATE, fmt, a, b);
+    OutputDebugStringW(L"[THEONE] ");
+    OutputDebugStringW(buf);
+    OutputDebugStringW(L"\n");
+}
+
 static IAudioClient* tryOpenStream(IMMDevice* dev, bool capture, bool raw, UINT32& bufFrames) {
     IAudioClient* ac = nullptr;
-    if (FAILED(dev->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void**)&ac)))
-        return nullptr;
+    {
+        const HRESULT hrAct = dev->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void**)&ac);
+        if (FAILED(hrAct)) {
+            // FIX 3: usually means Windows privacy is blocking mic access (0x80070005) or device is gone.
+            theoneLog(L"Activate failed capture=%ld hr=0x%08lX (check Windows Settings > Privacy > Microphone)", capture ? 1 : 0, (long)hrAct);
+            return nullptr;
+        }
+    }
     applyClientProps(ac, raw);
     HANDLE evt = capture ? gCapEvt : nullptr;
     if (capture && raw) {
@@ -629,9 +644,14 @@ static IAudioClient* tryOpenStream(IMMDevice* dev, bool capture, bool raw, UINT3
     DWORD flags = AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM;
     if (capture) flags |= AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
     const int ms = capture ? CAPTURE_BUFFER_MS : RENDER_BUFFER_MS;
-    if (FAILED(ac->Initialize(AUDCLNT_SHAREMODE_SHARED, flags, (REFERENCE_TIME)ms * 10000, 0, &fmt, nullptr))) {
-        ac->Release();
-        return nullptr;
+    {
+        const HRESULT hrInit = ac->Initialize(AUDCLNT_SHAREMODE_SHARED, flags, (REFERENCE_TIME)ms * 10000, 0, &fmt, nullptr);
+        if (FAILED(hrInit)) {
+            // FIX 3: format/sample-rate mismatch or device held by another app.
+            theoneLog(L"Initialize(shared, 48k float stereo) failed capture=%ld hr=0x%08lX", capture ? 1 : 0, (long)hrInit);
+            ac->Release();
+            return nullptr;
+        }
     }
     if (evt && FAILED(ac->SetEventHandle(evt))) {
         ac->Release();
@@ -644,7 +664,11 @@ static IAudioClient* tryOpenStream(IMMDevice* dev, bool capture, bool raw, UINT3
 static IAudioClient* openStream(IMMDevice* dev, bool capture, bool raw, UINT32& bufFrames) {
     IAudioClient* ac = tryOpenStream(dev, capture, raw, bufFrames);
     if (ac) return ac;
-    if (raw) return tryOpenStream(dev, capture, false, bufFrames);
+    if (raw) {
+        // FIX 4: raw / low-latency open failed -> fall back to plain shared mode.
+        theoneLog(L"Raw open failed (capture=%ld), falling back to shared mode", capture ? 1 : 0);
+        return tryOpenStream(dev, capture, false, bufFrames);
+    }
     return nullptr;
 }
 
@@ -953,12 +977,29 @@ static void audioThread() {
         std::wstring monOpenId;
         bool monOpenQuick = false;
 
+#ifdef THEONE_FORCE_ISOLATE_OFF
+        // FIX 1 (diagnostic, opt-in): define THEONE_FORCE_ISOLATE_OFF to bypass the isolator / expander gate.
+        // If sound passes with this on, isolation/gate was eating the signal.
+        g.isolate.store(false);
+        g.isoMode.store(ISO_VOCAL);
+#endif
+        theoneLog(L"Opening mic: isolate=%ld isoMode=%ld", (long)g.isolate.load(), (long)g.isoMode.load());
+        theoneLog(L"  gateLevel=%ld isoLevel=%ld", (long)g.gateLevel.load(), (long)g.isoLevel.load());
+        theoneLog(L"  rawMic=%ld micIdEmpty=%ld", (long)g.rawMic.load(), micId.empty() ? 1L : 0L);
+
         bool ok = false;
         do {
-            if (micId.empty() || !en) break;
-            if (FAILED(en->GetDevice(micId.c_str(), &dMic))) break;
+            if (micId.empty() || !en) { theoneLog(L"micId empty or enumerator missing"); break; }
+            {
+                const HRESULT hrDev = en->GetDevice(micId.c_str(), &dMic);
+                if (FAILED(hrDev)) { theoneLog(L"GetDevice(mic) failed hr=0x%08lX", (long)hrDev); break; }
+            }
             acMic = openCapture(dMic, bfMic);
-            if (!acMic) break;
+            if (!acMic) {
+                // FIX 2: device did not open
+                OutputDebugStringW(L"[THEONE] openCapture returned null\n");
+                break;
+            }
             if (FAILED(acMic->GetService(__uuidof(IAudioCaptureClient),
                                          (void**)&cap))) break;
             if (!cable.id.empty() && SUCCEEDED(en->GetDevice(cable.id.c_str(), &dCab)))
@@ -976,7 +1017,10 @@ static void audioThread() {
         if (!ok) {
             {
                 std::lock_guard<std::mutex> lk(g.devMx);
-                wcscpy_s(g.status, L"Can't open this microphone. Pick another one.");
+                // FIX 2: more specific hint; check Windows mic privacy, exclusive-mode apps, and Raw mic.
+                if (micId.empty()) wcscpy_s(g.status, L"No microphone selected. Pick one.");
+                else if (g.rawMic.load()) wcscpy_s(g.status, L"Can't open this microphone. Pick another one, or turn off Raw mic.");
+                else wcscpy_s(g.status, L"Can't open this microphone. Pick another one (check Windows mic privacy / close apps using it).");
             }
             g.running = false;
         } else {
@@ -1000,6 +1044,8 @@ static void audioThread() {
             int monKey = -1;
             UINT64 micNextPos = 0;
             int micPosRun = 0;
+            int silentRun = 0;          // FIX 3: consecutive WASAPI "silent" packets
+            bool silentWarned = false;
             while (!g.quit.load() && !g.restart.load()) {
                 int key = 0;
                 if (g.monitor.load()) key |= 1;
@@ -1083,6 +1129,22 @@ static void audioThread() {
                 UINT64 devPos = 0;
                 if (FAILED(cap->GetBuffer(&data, &got, &flags, &devPos, nullptr))) break;
                 const bool packetSilent = (flags & AUDCLNT_BUFFERFLAGS_SILENT) != 0;
+                // FIX 3: if the driver flags every packet silent (~3s), tell the user why.
+                if (packetSilent) {
+                    if (++silentRun >= 300 && !silentWarned) {
+                        silentWarned = true;
+                        theoneLog(L"Driver reports SILENT packets for %ld packets in a row", (long)silentRun);
+                        std::lock_guard<std::mutex> lk(g.devMx);
+                        wcscpy_s(g.status, L"Mic is sending silence. Check Windows mic privacy, mute, or other apps using it.");
+                    }
+                } else {
+                    if (silentWarned) {
+                        silentWarned = false;
+                        std::lock_guard<std::mutex> lk(g.devMx);
+                        g.status[0] = 0;
+                    }
+                    silentRun = 0;
+                }
                 UINT32 lost = 0;
                 if (devPos == micNextPos) micPosRun = std::min(micPosRun + 1, MIC_POS_TRUST);
                 else if (micPosRun >= MIC_POS_TRUST && bfMic < MOST_LOST_FRAMES && devPos > micNextPos && devPos - micNextPos <= MOST_LOST_FRAMES) lost = (UINT32)(devPos - micNextPos);
@@ -5392,6 +5454,8 @@ static void settingsLoad() {
         g.isolate = true;
         g.isoMode = ISO_VOCAL;
     }
+    // FIX 1: verify what actually loaded from the registry (stale "Isolation"/"MixOn" = 1 keeps the gate on).
+    theoneLog(L"Loaded settings: isolate=%ld MixOn(legacy)=%ld", (long)g.isolate.load(), chainWasOn ? 1L : 0L);
     g.clipHear = get(L"ClipHear", 0, 1, 1) != 0;
     g.clipToMic = get(L"ClipToMic", 0, 1, 1) != 0;
     g.appHear = get(L"AppHear", 0, 1, 0) != 0;
@@ -12329,6 +12393,30 @@ static void ghostClear() {
     dropStop();
 }
 
+// FIX (won't-close): the single-instance mutex is released as soon as the window goes away, and a
+// watchdog force-exits the process if a worker thread (usually a blocked WASAPI call) hangs shutdown.
+// Without this the zombie process kept the mutex, so re-opening the app silently did nothing.
+static HANDLE gSingleMutex = nullptr;
+
+static void releaseSingleInstance() {
+    HANDLE m = (HANDLE)InterlockedExchangePointer((PVOID volatile*)&gSingleMutex, nullptr);
+    if (m) CloseHandle(m);
+}
+
+static void beginShutdownWatchdog() {
+    static std::atomic<bool> started{false};
+    if (started.exchange(true)) return;
+    releaseSingleInstance();
+    std::thread([] {
+        const ULONGLONG t0 = GetTickCount64();
+        Sleep(8000);
+        // let an in-progress clip/media save finish, but never hang forever
+        while (gMediaWork.load() > 0 && GetTickCount64() - t0 < 25000) Sleep(100);
+        theoneLog(L"Shutdown watchdog: forcing exit");
+        ExitProcess(0);
+    }).detach();
+}
+
 static LRESULT CALLBACK wndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
     switch (m) {
     case WM_PAINT:
@@ -13235,6 +13323,7 @@ static LRESULT CALLBACK wndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         break;
     case WM_ENDSESSION:
         if (w) {
+            beginShutdownWatchdog();
             settingsFlush();
             presetTopKeep();
             g.quit = true;
@@ -13244,6 +13333,8 @@ static LRESULT CALLBACK wndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         }
         return 0;
     case WM_DESTROY:
+        beginShutdownWatchdog();
+        ShowWindow(h, SW_HIDE);
         dockDrop();
         ghostClear();
         settingsFlush();
@@ -13373,6 +13464,7 @@ int WINAPI WinMain(_In_ HINSTANCE hi, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int n
         if (other || wait >= 30) return 0;
         Sleep(100);
     }
+    gSingleMutex = single;   // so shutdown can release it early
     const bool firstRun = !settingsKept();
     const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     const bool media = clip::mediaReady() && SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_FULL));
@@ -13547,6 +13639,7 @@ int WINAPI WinMain(_In_ HINSTANCE hi, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int n
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
     }
+    beginShutdownWatchdog();   // covers exits that never went through WM_DESTROY
     g.quit = true;
     gApp.stop();
     gClip.stop();
@@ -13564,9 +13657,9 @@ int WINAPI WinMain(_In_ HINSTANCE hi, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int n
     if (takeFxJob) takeFxJob->stop = true;
     const bool clipDone = gClip.settle(3000);
     const bool mediaDone = mediaSettle(20000);
-    if (single) CloseHandle(single);
+    releaseSingleInstance();
     if (!clipDone || !mediaDone) ExitProcess(0);
     if (media) MFShutdown();
     if (SUCCEEDED(com)) CoUninitialize();
-    return 0;
+    ExitProcess(0);   // skip CRT/static teardown, which can also hang and leave a zombie process
 }
